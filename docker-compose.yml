@@ -1,0 +1,41 @@
+version: '3'
+services:
+  db:
+    image: "postgres"
+    volumes:
+      - ./tmp/db:/var/lib/postgresql/data
+    env_file:
+      - '.env'
+
+  redis:
+    image: "redis:alpine"
+    command: redis-server
+    volumes:
+      - './redis:/data'
+    env_file:
+      - '.env'
+
+  sidekiq:
+    build: .
+    depends_on:
+      - 'db'
+      - 'redis'
+    command: bundle exec sidekiq
+    working_dir: /app
+    volumes:
+      - .:/app
+      - .bundle:/usr/local/bundle
+    env_file:
+      - '.env'
+
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/currency
+      - .bundle:/usr/local/bundle
+    command: /bin/bash -c 'rm -rf ./tmp/pids/server.pid && bundle exec rails s -b 0.0.0.0 -p 3000'
+    depends_on:
+      - db
+
